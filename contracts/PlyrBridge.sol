@@ -68,20 +68,40 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         require(isWrappedToken[token], "PlyrBridge: token not wrapped");
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         WrappedToken(token).burn(address(this), amount);
+        string memory name = WrappedToken(token).name();
+        string memory symbol = WrappedToken(token).symbol();
+        uint8 decimals = WrappedToken(token).decimals();
 
         _dispatchMessage(
             toChainId, // bip-44 chainId
             address(this), // same contract on other chain
-            abi.encode("crossBack", remoteTokenMappings[token], recipent, amount, "", "", 0), // fill blank to make same length as crossTo
+            abi.encode("crossBack", remoteTokenMappings[token], recipent, amount, name, symbol, decimals), // fill blank to make same length as crossTo
             msg.value
         );
         emit CrossBack(token, toChainId, recipent, amount);
     }
     
-    function configTokenAllowed(address token, string calldata name, string calldata symbol, uint8 decimals, bool allowed) external onlyOwner {
+    function configTokenAllowed(address token, string calldata symbol, uint8 decimals, bool allowed) external onlyOwner {
         isTokenAllowed[token] = allowed;
+        string memory name = strConcat("PLYR Wrapped ", symbol);
         tokenInfos[token] = TokenInfo(name, symbol, decimals);
         emit ConfigTokenAllowed(token, name, symbol, decimals, allowed);
+    }
+
+    function strConcat(string memory _a, string memory _b) public pure returns (string memory) {
+        bytes memory _ba = bytes(_a);
+        bytes memory _bb = bytes(_b);
+        bytes memory _result = new bytes(_ba.length + _bb.length);
+        uint256 k = 0;
+        for (uint256 i = 0; i < _ba.length; i++) {
+            _result[k] = _ba[i];
+            k++;
+        }
+        for (uint256 i = 0; i < _bb.length; i++) {
+            _result[k] = _bb[i];
+            k++;
+        }
+        return string(_result);
     }
 
     function _wmbReceive(
@@ -103,6 +123,10 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
             }
             WrappedToken(wrappedToken).mint(recipent, amount);
         } else if (keccak256(abi.encodePacked(method)) == keccak256(abi.encodePacked("crossBack"))) {
+            TokenInfo memory tokenInfo = TokenInfo(name, symbol, decimals);
+            require(keccak256(abi.encode(tokenInfos[token])) == keccak256(abi.encode(tokenInfo)), "PlyrBridge: token name mismatch");
+            require(isTokenAllowed[token], "PlyrBridge: token not allowed");
+
             if (token == address(0)) {
                 Address.sendValue(payable(recipent), amount);
             } else {
