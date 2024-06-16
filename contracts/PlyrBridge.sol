@@ -18,6 +18,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         uint8 decimals;
     }
 
+    bool public paused;
     mapping(address => bool) public isTokenAllowed;
     mapping(address => bool) public isWrappedToken;
     mapping(address => address) public remoteTokenMappings;
@@ -28,6 +29,11 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     event CrossBack(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
     event ConfigTokenAllowed(address indexed token, string name, string symbol, uint8 decimals, bool allowed);
     event ReceivedMessage(address indexed from, bytes32 indexed messageId, uint256 indexed fromChainId, address token, address recipent, uint256 amount, string name, string symbol, uint8 decimals);
+
+    modifier notPaused() {
+        require(!paused, "PlyrBridge: paused");
+        _;
+    }
 
     function initialize(address _owner, address _gateway) public initializer {
         __initialize(_gateway);
@@ -40,7 +46,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         uint256 toChainId, // bip-44 chainId
         address recipent,
         uint256 amount
-    ) external payable nonReentrant {
+    ) external payable nonReentrant notPaused {
         require(isTokenAllowed[token], "PlyrBridge: token not allowed");
         uint fee = msg.value;
         if (token == address(0)) { // for native coin such as ETH, AVAX, MATIC etc.
@@ -64,7 +70,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         uint256 toChainId,
         address recipent,
         uint256 amount
-    ) external payable nonReentrant {
+    ) external payable nonReentrant notPaused {
         require(isWrappedToken[token], "PlyrBridge: token not wrapped");
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         WrappedToken(token).burn(address(this), amount);
@@ -88,6 +94,10 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         emit ConfigTokenAllowed(token, name, symbol, decimals, allowed);
     }
 
+    function configPause(bool _paused) external onlyOwner {
+        paused = _paused;
+    }
+
     function strConcat(string memory _a, string memory _b) public pure returns (string memory) {
         bytes memory _ba = bytes(_a);
         bytes memory _bb = bytes(_b);
@@ -109,7 +119,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         bytes32 messageId,
         uint256 fromChainId,
         address from
-    ) virtual internal override {
+    ) virtual internal override notPaused {
         (string memory method, address token, address recipent, uint256 amount, string memory name, string memory symbol, uint8 decimals) = abi.decode(data, (string, address, address, uint256, string, string, uint8));
         if (keccak256(abi.encodePacked(method)) == keccak256(abi.encodePacked("crossTo"))) {
             TokenInfo memory tokenInfo = TokenInfo(name, symbol, decimals);
