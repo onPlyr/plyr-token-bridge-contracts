@@ -108,4 +108,8 @@ abstract contract WmbApp is OwnableUpgradeable, IWmbReceiver {
     function _dispatchMessageBatch(uint256 toChainId, Message[] memory messages, uint fee) virtual internal returns (bytes32) {
         return IWmbGateway(wmbGateway).dispatchMessageBatch{value: fee}(toChainId, messages);
     }
+
+    function changeGateway(address _wmbGateway) external onlyOwner {
+        wmbGateway = _wmbGateway;
+    }
 }

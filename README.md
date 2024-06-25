@@ -1,13 +1,6 @@
-# Sample Hardhat Project
+# Plyr Token Bridge
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+Testnet deployed address on fuji, bsc, sepolia: 
 
-Try running some of the following tasks:
+PlyrBridge address: 0x43B1EF2D8B0Ea6E9929e969B3eBfE3207B657b94
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
