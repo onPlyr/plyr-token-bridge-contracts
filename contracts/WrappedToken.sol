@@ -12,7 +12,7 @@ contract WrappedToken is ERC20, Ownable {
 
     uint8 public _decimals;
 
-    constructor (string memory _name, string memory _symbol, uint8 decimals_) ERC20(_name, _symbol) {
+    constructor (string memory _name, string memory _symbol, uint8 decimals_) ERC20(_name, _symbol) Ownable(msg.sender) {
         _decimals = decimals_;
     }
 
