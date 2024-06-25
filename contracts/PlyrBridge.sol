@@ -18,6 +18,11 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         uint8 decimals;
     }
 
+    struct DecimalInfo {
+        uint8 fromDecimals;
+        uint8 wrappedDecimals;
+    }
+
     bool public paused;
     mapping(address => bool) public isTokenAllowed;
     mapping(address => bool) public isWrappedToken;
@@ -25,10 +30,11 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     mapping(bytes32 => address) public wrappedTokens; // TokenInfo keccak256 hash => wrapped token address
     mapping(address => TokenInfo) public tokenInfos;
     mapping(uint256 => mapping(address => uint256)) public remoteQuota;
+    mapping(address => DecimalInfo) public decimalInfos;
 
     event CrossTo(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
     event CrossBack(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
-    event ConfigTokenAllowed(address indexed token, string name, string symbol, uint8 decimals, bool allowed);
+    event ConfigTokenAllowed(address indexed token, string name, string symbol, uint8 fromDecimals, uint8 wrappedDecimals, bool allowed);
     event ReceivedMessage(address indexed from, bytes32 indexed messageId, uint256 indexed fromChainId, address token, address recipent, uint256 amount, string name, string symbol, uint8 decimals);
 
     modifier notPaused() {
@@ -57,10 +63,17 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         }
 
+        uint256 wrappedAmount;
+        {
+            uint256 fromDecimals = decimalInfos[token].fromDecimals;
+            uint256 wrappedDecimals = decimalInfos[token].wrappedDecimals;
+            wrappedAmount = amount * (10 ** wrappedDecimals) / (10 ** fromDecimals);
+        }
+
         _dispatchMessage(
             toChainId, // bip-44 chainId
             address(this), // same contract on other chain
-            abi.encode("crossTo", token, recipent, amount, tokenInfos[token].name, tokenInfos[token].symbol, tokenInfos[token].decimals),
+            abi.encode("crossTo", token, recipent, wrappedAmount, tokenInfos[token].name, tokenInfos[token].symbol, tokenInfos[token].decimals),
             fee
         );
         emit CrossTo(token, toChainId, recipent, amount);
@@ -91,11 +104,12 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         emit CrossBack(token, toChainId, recipent, amount);
     }
     
-    function configTokenAllowed(address token, string calldata symbol, uint8 decimals, bool allowed) external onlyOwner {
+    function configTokenAllowed(address token, string calldata symbol, uint8 fromDecimals, uint8 wrappedDecimals, bool allowed) external onlyOwner {
         isTokenAllowed[token] = allowed;
         string memory name = strConcat("PLYR Wrapped ", symbol);
-        tokenInfos[token] = TokenInfo(name, symbol, decimals);
-        emit ConfigTokenAllowed(token, name, symbol, decimals, allowed);
+        tokenInfos[token] = TokenInfo(name, symbol, wrappedDecimals);
+        decimalInfos[token] = DecimalInfo(fromDecimals, wrappedDecimals);
+        emit ConfigTokenAllowed(token, name, symbol, fromDecimals, wrappedDecimals, allowed);
     }
 
     function configPause(bool _paused) external onlyOwner {
@@ -141,11 +155,14 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
             TokenInfo memory tokenInfo = TokenInfo(name, symbol, decimals);
             require(keccak256(abi.encode(tokenInfos[token])) == keccak256(abi.encode(tokenInfo)), "PlyrBridge: token name mismatch");
             require(isTokenAllowed[token], "PlyrBridge: token not allowed");
+            uint256 fromDecimals = decimalInfos[token].fromDecimals;
+            uint256 wrappedDecimals = decimalInfos[token].wrappedDecimals;
+            uint256 fromAmount = amount * (10 ** fromDecimals) / (10 ** wrappedDecimals);
 
             if (token == address(0)) {
-                Address.sendValue(payable(recipent), amount);
+                Address.sendValue(payable(recipent), fromAmount);
             } else {
-                IERC20(token).safeTransfer(recipent, amount);
+                IERC20(token).safeTransfer(recipent, fromAmount);
             }
         }
         emit ReceivedMessage(from, messageId, fromChainId, token, recipent, amount, name, symbol, decimals);
