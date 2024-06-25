@@ -24,6 +24,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     mapping(address => address) public remoteTokenMappings;
     mapping(bytes32 => address) public wrappedTokens; // TokenInfo keccak256 hash => wrapped token address
     mapping(address => TokenInfo) public tokenInfos;
+    mapping(uint256 => mapping(address => uint256)) public remoteQuota;
 
     event CrossTo(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
     event CrossBack(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
@@ -78,6 +79,9 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         string memory symbol = WrappedToken(token).symbol();
         uint8 decimals = WrappedToken(token).decimals();
 
+        require(remoteQuota[toChainId][remoteTokenMappings[token]] >= amount, "PlyrBridge: insufficient quota");
+        remoteQuota[toChainId][remoteTokenMappings[token]] -= amount;
+        
         _dispatchMessage(
             toChainId, // bip-44 chainId
             address(this), // same contract on other chain
@@ -132,6 +136,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
                 remoteTokenMappings[wrappedToken] = token;
             }
             WrappedToken(wrappedToken).mint(recipent, amount);
+            remoteQuota[fromChainId][token] += amount;
         } else if (keccak256(abi.encodePacked(method)) == keccak256(abi.encodePacked("crossBack"))) {
             TokenInfo memory tokenInfo = TokenInfo(name, symbol, decimals);
             require(keccak256(abi.encode(tokenInfos[token])) == keccak256(abi.encode(tokenInfo)), "PlyrBridge: token name mismatch");
