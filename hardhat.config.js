@@ -32,7 +32,7 @@ module.exports = {
       maxPriorityFeePerGas: 1e9,
     },
     sepolia: {
-      url: "https://rpc2.sepolia.org",
+      url: "https://ethereum-sepolia-rpc.publicnode.com",
       accounts: [process.env.PK],
     },
     fuji: {
