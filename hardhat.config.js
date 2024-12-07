@@ -43,5 +43,9 @@ module.exports = {
       url: 'https://bsc-testnet-rpc.publicnode.com',
       accounts: [process.env.PK],
     },
+    plyrTestnet: {
+      url: "https://subnets.avax.network/plyr/testnet/rpc",
+      accounts: [process.env.PK],
+    }
   }
 };

@@ -112,6 +112,10 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         emit ConfigTokenAllowed(token, name, symbol, fromDecimals, wrappedDecimals, allowed);
     }
 
+    function configWmbGateway(address _wmbGateway) external onlyOwner {
+        wmbGateway = _wmbGateway;
+    }
+
     function configPause(bool _paused) external onlyOwner {
         paused = _paused;
     }
