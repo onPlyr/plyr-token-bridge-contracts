@@ -56,18 +56,22 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     ) external payable nonReentrant notPaused {
         require(isTokenAllowed[token], "PlyrBridge: token not allowed");
         uint fee = msg.value;
+        uint receivedAmount;
         if (token == address(0)) { // for native coin such as ETH, AVAX, MATIC etc.
             require(msg.value >= amount, "PlyrBridge: insufficient amount");
             fee = msg.value - amount;
+            receivedAmount = amount;
         } else {
+            uint balanceBefore = IERC20(token).balanceOf(address(this));
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            receivedAmount = IERC20(token).balanceOf(address(this)) - balanceBefore;
         }
 
         uint256 wrappedAmount;
         {
             uint256 fromDecimals = decimalInfos[token].fromDecimals;
             uint256 wrappedDecimals = decimalInfos[token].wrappedDecimals;
-            wrappedAmount = amount * (10 ** wrappedDecimals) / (10 ** fromDecimals);
+            wrappedAmount = receivedAmount * (10 ** wrappedDecimals) / (10 ** fromDecimals);
         }
 
         _dispatchMessage(
@@ -76,7 +80,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
             abi.encode("crossTo", token, recipent, wrappedAmount, tokenInfos[token].name, tokenInfos[token].symbol, tokenInfos[token].decimals),
             fee
         );
-        emit CrossTo(token, toChainId, recipent, amount);
+        emit CrossTo(token, toChainId, recipent, receivedAmount);
     }
 
     function crossBack(
