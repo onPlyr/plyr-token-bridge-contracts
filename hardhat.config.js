@@ -32,6 +32,10 @@ module.exports = {
       gas: 8e6,
       maxPriorityFeePerGas: 1e9,
     },
+    baseSepolia: {
+      url: 'https://base-sepolia-rpc.publicnode.com',
+      accounts: [process.env.PK],
+    },
     sepolia: {
       url: "https://ethereum-sepolia-rpc.publicnode.com",
       accounts: [process.env.PK],
