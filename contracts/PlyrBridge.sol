@@ -110,7 +110,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     
     function configTokenAllowed(address token, string calldata symbol, uint8 fromDecimals, uint8 wrappedDecimals, bool allowed) external onlyOwner {
         isTokenAllowed[token] = allowed;
-        string memory name = strConcat("PLYR Wrapped ", symbol);
+        string memory name = strConcat(symbol, "[PLYR]");
         tokenInfos[token] = TokenInfo(name, symbol, wrappedDecimals);
         decimalInfos[token] = DecimalInfo(fromDecimals, wrappedDecimals);
         emit ConfigTokenAllowed(token, name, symbol, fromDecimals, wrappedDecimals, allowed);
