@@ -51,6 +51,27 @@ module.exports = {
     plyrTestnet: {
       url: "https://subnets.avax.network/plyr/testnet/rpc",
       accounts: [process.env.PK],
-    }
+    },
+    arbitrum: {
+      url: "https://arbitrum-one-rpc.publicnode.com",
+      accounts: [process.env.PK],
+    },
+    op: {
+      url: "https://optimism-rpc.publicnode.com",
+      accounts: [process.env.PK],
+    },
+    bsc: {
+      url: "https://bsc-rpc.publicnode.com",
+      accounts: [process.env.PK],
+      gasPrice: 3e9,
+    },
+    base: {
+      url: "https://base-rpc.publicnode.com",
+      accounts: [process.env.PK],
+    },
+    plyrMainnet: {
+      url: "https://subnets.avax.network/plyr/mainnet/rpc",
+      accounts: [process.env.PK],
+    },
   }
 };
