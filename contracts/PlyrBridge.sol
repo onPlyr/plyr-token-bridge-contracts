@@ -36,6 +36,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     event CrossBack(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
     event ConfigTokenAllowed(address indexed token, string name, string symbol, uint8 fromDecimals, uint8 wrappedDecimals, bool allowed);
     event ReceivedMessage(address indexed from, bytes32 indexed messageId, uint256 indexed fromChainId, address token, address recipent, uint256 amount, string name, string symbol, uint8 decimals);
+    event RemoveToken(address indexed token, string name, string symbol, uint8 fromDecimals, uint8 wrappedDecimals);
 
     modifier notPaused() {
         require(!paused, "PlyrBridge: paused");
@@ -116,6 +117,21 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         emit ConfigTokenAllowed(token, name, symbol, fromDecimals, wrappedDecimals, allowed);
     }
 
+    function removeToken(address token) external payable onlyOwner {
+        _dispatchMessage(
+            toChainId, // bip-44 chainId
+            address(this), // same contract on other chain
+            abi.encode("removeToken", token, address(this), 0, tokenInfos[token].name, tokenInfos[token].symbol, tokenInfos[token].decimals),
+            fee
+        );
+
+        emit RemoveToken(token, tokenInfos[token].name, tokenInfos[token].symbol, tokenInfos[token].decimals);
+
+        delete tokenInfos[token];
+        delete decimalInfos[token];
+        delete isTokenAllowed[token];
+    }
+
     function configWmbGateway(address _wmbGateway) external onlyOwner {
         wmbGateway = _wmbGateway;
     }
@@ -172,6 +188,14 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
             } else {
                 IERC20(token).safeTransfer(recipent, fromAmount);
             }
+        } else if (keccak256(abi.encodePacked(method)) == keccak256(abi.encodePacked("removeToken"))) {
+            TokenInfo memory tokenInfo = TokenInfo(name, symbol, decimals);
+            bytes32 tokenHash = keccak256(abi.encode(tokenInfo));
+            address wrappedToken = wrappedTokens[tokenHash];
+            delete wrappedTokens[tokenHash];
+            delete isWrappedToken[wrappedToken];
+            delete remoteTokenMappings[wrappedToken];
+            delete remoteQuota[fromChainId][token];
         }
         emit ReceivedMessage(from, messageId, fromChainId, token, recipent, amount, name, symbol, decimals);
     }
