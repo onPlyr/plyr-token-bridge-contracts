@@ -36,7 +36,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
     event CrossBack(address indexed token, uint256 toChainId, address indexed recipent, uint256 amount);
     event ConfigTokenAllowed(address indexed token, string name, string symbol, uint8 fromDecimals, uint8 wrappedDecimals, bool allowed);
     event ReceivedMessage(address indexed from, bytes32 indexed messageId, uint256 indexed fromChainId, address token, address recipent, uint256 amount, string name, string symbol, uint8 decimals);
-    event RemoveToken(address indexed token, string name, string symbol, uint8 fromDecimals, uint8 wrappedDecimals);
+    event RemoveToken(address indexed token);
 
     modifier notPaused() {
         require(!paused, "PlyrBridge: paused");
@@ -117,7 +117,9 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
         emit ConfigTokenAllowed(token, name, symbol, fromDecimals, wrappedDecimals, allowed);
     }
 
-    function removeToken(address token) external payable onlyOwner {
+    function removeToken(address token, uint256 toChainId) external payable onlyOwner {
+        uint fee = msg.value;
+
         _dispatchMessage(
             toChainId, // bip-44 chainId
             address(this), // same contract on other chain
@@ -125,7 +127,7 @@ contract PlyrBridge is ReentrancyGuardUpgradeable, WmbApp {
             fee
         );
 
-        emit RemoveToken(token, tokenInfos[token].name, tokenInfos[token].symbol, tokenInfos[token].decimals);
+        emit RemoveToken(token);
 
         delete tokenInfos[token];
         delete decimalInfos[token];
