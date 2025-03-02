@@ -73,5 +73,15 @@ module.exports = {
       url: "https://subnets.avax.network/plyr/mainnet/rpc",
       accounts: [process.env.PK],
     },
+    polygonAmoy: {
+      url: "https://polygon-amoy-bor-rpc.publicnode.com",
+      accounts: [process.env.PK],
+      gasPrice: 40e9,
+    },
+    polygon: {
+      url: "https://polygon-bor-rpc.publicnode.com",
+      accounts: [process.env.PK],
+      gasPrice: 40e9,
+    }
   }
 };
